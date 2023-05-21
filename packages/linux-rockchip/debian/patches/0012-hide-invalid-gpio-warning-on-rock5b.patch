@@ -1,0 +1,27 @@
+From e0f391361a3b8ce1fa9749a6bd41772893d30496 Mon Sep 17 00:00:00 2001
+From: Joshua Riek <jjriek@verizon.net>
+Date: Sun, 21 May 2023 16:09:04 -0400
+Subject: [PATCH] drivers: gpio: hide invalid gpio warning on rock5b
+
+---
+ drivers/gpio/gpiolib.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/gpio/gpiolib.c b/drivers/gpio/gpiolib.c
+index 0a8ad0d2742a..7819a71a265f 100644
+--- a/drivers/gpio/gpiolib.c
++++ b/drivers/gpio/gpiolib.c
+@@ -122,8 +122,8 @@ struct gpio_desc *gpio_to_desc(unsigned gpio)
+ 
+ 	spin_unlock_irqrestore(&gpio_lock, flags);
+ 
+-	if (!gpio_is_valid(gpio))
+-		WARN(1, "invalid GPIO %d\n", gpio);
++	//if (!gpio_is_valid(gpio))
++	//	WARN(1, "invalid GPIO %d\n", gpio);
+ 
+ 	return NULL;
+ }
+-- 
+2.25.1
+

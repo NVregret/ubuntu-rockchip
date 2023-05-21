@@ -9,3 +9,4 @@
 0009-add-overlays-for-opi5-and-opi5-plus.patch
 0010-realtek-8852b-stuff-extracted-from-xunlong.patch
 0011-more-stuff-extracted-from-xunlong.patch
+0012-hide-invalid-gpio-warning-on-rock5b.patch
