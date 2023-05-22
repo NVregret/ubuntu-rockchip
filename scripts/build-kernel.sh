@@ -14,7 +14,7 @@ mkdir -p build && cd build
 if [ ! -d linux-rockchip ]; then
     # shellcheck source=/dev/null
     source ../packages/linux-rockchip/debian/upstream
-    git clone --single-branch --progress -b "${BRANCH}" "${GIT}" linux-rockchip
+    git clone --depth=1 --single-branch --progress -b "${BRANCH}" "${GIT}" linux-rockchip
     git -C linux-rockchip checkout "${COMMIT}"
     cp -r ../packages/linux-rockchip/debian linux-rockchip
     cp -r ../packages/linux-rockchip/debian/kernel/* linux-rockchip/arch/arm64/boot/dts/rockchip
