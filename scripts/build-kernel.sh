@@ -18,6 +18,7 @@ if [ ! -d linux-rockchip ]; then
     git -C linux-rockchip checkout "${COMMIT}"
     cp -r ../packages/linux-rockchip/debian linux-rockchip
     cp -r ../packages/linux-rockchip/debian/kernel/* linux-rockchip/arch/arm64/boot/dts/rockchip
+    rm -rf *.deb
 
 fi
 cd linux-rockchip
