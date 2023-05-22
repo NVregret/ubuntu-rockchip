@@ -1,0 +1,5 @@
+u-boot-lubancat-rk3588 (2017.09+20230413.gita2a9f1df-1) jammy; urgency=medium
+
+  * Inital packaging. 
+
+ -- Joshua Riek <jjriek@verizon.net>  Tue, 16 May 2023 09:05:52 -0400

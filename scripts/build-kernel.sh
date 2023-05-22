@@ -19,7 +19,7 @@ if [ ! -d linux-rockchip ]; then
 
 fi
 
-rm -rf *.deb
+rm -rf linux*.deb
 rm -rf linux-rockchip/debian/*
 cp -r ../packages/linux-rockchip/debian linux-rockchip
 cp -r ../packages/linux-rockchip/debian/kernel/* linux-rockchip/arch/arm64/boot/dts/rockchip

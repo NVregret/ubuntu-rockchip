@@ -15,7 +15,7 @@
 #include <dt-bindings/display/rockchip_vop.h>
 #include <dt-bindings/sensor-dev.h>
 #include "rk3588s.dtsi"
-#include "rk3588-linux.dtsi"
+#include "rk3588s-linux.dtsi"
 
 // #include "rk3588s-lubancat-40pin.dtsi"
 // #include "rk3588s-lubancat-csi2.dtsi"
