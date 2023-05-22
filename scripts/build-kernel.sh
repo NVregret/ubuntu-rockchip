@@ -17,6 +17,8 @@ if [ ! -d linux-rockchip ]; then
     git clone --single-branch --progress -b "${BRANCH}" "${GIT}" linux-rockchip
     git -C linux-rockchip checkout "${COMMIT}"
     cp -r ../packages/linux-rockchip/debian linux-rockchip
+    cp -r ../packages/linux-rockchip/debian/kernel/* linux-rockchip/arch/arm64/boot/dts/rockchip
+
 fi
 cd linux-rockchip
 
