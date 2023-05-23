@@ -11,12 +11,14 @@ on:
         options:
         - "orangepi5"
         - "orangepi5b"
+        - "orangepi5plus"
+        - "rock5b"
+        - "rock5a"
+        - "nanopir6c"
+        - "nanopir6s"
+        - "indiedroid-nova"
 
 env:
-  MODEL: ${{ inputs.model }}
-  VERSION: ${{ inputs.version }}
-  KMODS_IN_FIRMWARE: ${{ inputs.kmod }}
-  UPLOAD_RELEASE: true
   TZ: Asia/Shanghai
   
 jobs:
@@ -36,5 +38,5 @@ jobs:
       uses: actions/checkout@v3
 
     - name: Build
-       run: |
+      run: |
         bash +x build.sh -b ${{ inputs.board }}
