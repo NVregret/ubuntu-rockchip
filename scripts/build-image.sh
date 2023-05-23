@@ -82,6 +82,9 @@ elif [[ "${BOARD}" == nanopir6c ]]; then
 elif [[ "${BOARD}" == nanopir6s ]]; then
     DEVICE_TREE=rk3588s-nanopi-r6s.dtb
     OVERLAY_PREFIX=
+elif [[ "${BOARD}" == lubancat-4 ]]; then
+    DEVICE_TREE=rk3588s-lubancat-4.dtb
+    OVERLAY_PREFIX=
 fi
 
 # Create an empty disk image
