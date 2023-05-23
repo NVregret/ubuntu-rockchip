@@ -96,6 +96,8 @@ elif [[ "${BOARD}" =~ nanopir6c|nanopir6s ]]; then
     export VENDOR=nanopi
 elif [[ "${BOARD}" =~ indiedroid-nova ]]; then
     export VENDOR=9tripod
+elif [[ "${BOARD}" =~ lubancat-4 ]]; then
+    export VENDOR=lubancat
 else
     echo "Error: \"${BOARD}\" is an unsupported board"
     exit 1
@@ -122,3 +124,4 @@ fi
 eval "${DOCKER}" ./scripts/build-rootfs.sh
 
 exit 0
+
