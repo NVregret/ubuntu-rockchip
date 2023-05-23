@@ -17,6 +17,7 @@ on:
         - "nanopir6c"
         - "nanopir6s"
         - "indiedroid-nova"
+        - "lubancat-4"
       clean:
         description: clean the build directory
         required: true
@@ -88,4 +89,4 @@ jobs:
         if [ "${{ inputs.verbose }}" == true ]; then
           args="$args -v"
         fi
-        bash +x build.sh -b ${{ inputs.board }} $args
+        sudo ./build.sh -b ${{ inputs.board }} $args
