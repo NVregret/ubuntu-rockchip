@@ -1,0 +1,40 @@
+name: build-compose
+
+on:
+  repository_dispatch:
+  workflow_dispatch:
+    inputs:
+      board:
+        description: 'Compile Board'
+        required: true
+        type: choice
+        options:
+        - "orangepi5"
+        - "orangepi5b"
+
+env:
+  MODEL: ${{ inputs.model }}
+  VERSION: ${{ inputs.version }}
+  KMODS_IN_FIRMWARE: ${{ inputs.kmod }}
+  UPLOAD_RELEASE: true
+  TZ: Asia/Shanghai
+  
+jobs:
+
+  Build:
+    runs-on: self-hosted
+    timeout-minutes: 1440
+    steps:
+
+    - name: Set Timezone
+      run: |
+        sudo rm -rf /etc/localtime 
+        sudo ln -s /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+        date
+        
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Build
+       run: |
+        bash +x build.sh -b ${{ inputs.board }}
