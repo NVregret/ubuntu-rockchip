@@ -11,29 +11,8 @@ fi
 cd "$(dirname -- "$(readlink -f -- "$0")")" && cd ..
 mkdir -p build && cd build
 
-if [[ -z ${BOARD} ]]; then
-    echo "Error: BOARD is not set"
-    exit 1
-fi
-
-if [[ -z ${VENDOR} ]]; then
-    echo "Error: VENDOR is not set"
-    exit 1
-fi
-
-if [[ ${LAUNCHPAD} != "Y" ]]; then
-    for file in linux-{headers,image,dtb}-5.10.110-rockchip-rk3588_*.deb; do
-        if [ ! -e "$file" ]; then
-            echo "Error: missing kernel debs, please run build-kernel.sh"
-            exit 1
-        fi
-    done
-    for file in u-boot-"${BOARD}"-rk3588_*.deb; do
-        if [ ! -e "$file" ]; then
-            echo "Error: missing u-boot deb, please run build-u-boot.sh"
-            exit 1
-        fi
-    done
+if [[ -f ubuntu-22.04.2-preinstalled-server-arm64.rootfs.tar.xz && -f ubuntu-22.04.2-preinstalled-desktop-arm64.rootfs.tar.xz ]]; then
+    exit 0
 fi
 
 # These env vars can cause issues with chroot
@@ -113,8 +92,10 @@ mount -t sysfs /sys ${chroot_dir}/sys
 mount -o bind /dev ${chroot_dir}/dev
 mount -o bind /dev/pts ${chroot_dir}/dev/pts
 
-# Package priority for rockchip ppa
+# Package priority for ppa
 cp ${overlay_dir}/etc/apt/preferences.d/rockchip-ppa ${chroot_dir}/etc/apt/preferences.d/rockchip-ppa
+cp ${overlay_dir}/etc/apt/preferences.d/panfork-mesa-ppa ${chroot_dir}/etc/apt/preferences.d/panfork-mesa-ppa
+cp ${overlay_dir}/etc/apt/preferences.d/rockchip-multimedia-ppa ${chroot_dir}/etc/apt/preferences.d/rockchip-multimedia-ppa
 
 # Download and update packages
 cat << EOF | chroot ${chroot_dir} /bin/bash
@@ -129,6 +110,10 @@ update-locale LANG="en_US.UTF-8"
 apt-get -y update && apt-get -y install software-properties-common
 add-apt-repository -y ppa:jjriek/rockchip
 
+# Add mesa and rockchip multimedia ppa
+add-apt-repository -y ppa:liujianfeng1994/panfork-mesa
+add-apt-repository -y ppa:liujianfeng1994/rockchip-multimedia
+
 # Download and update installed packages
 apt-get -y update && apt-get -y upgrade && apt-get -y dist-upgrade
 
@@ -139,7 +124,7 @@ ubuntu-drivers-common ubuntu-server dosfstools mtools parted ntfs-3g zip atop \
 p7zip-full htop iotop pciutils lshw lsof landscape-common exfat-fuse hwinfo \
 net-tools wireless-tools openssh-client openssh-server wpasupplicant ifupdown \
 pigz wget curl lm-sensors bluez gdisk usb-modeswitch usb-modeswitch-data make \
-gcc libc6-dev bison libssl-dev flex flash-kernel fake-hwclock rfkill
+gcc libc6-dev bison libssl-dev flex flash-kernel fake-hwclock rfkill wireless-regdb
 
 # Remove cryptsetup and needrestart
 apt-get -y remove cryptsetup needrestart
@@ -157,35 +142,6 @@ dd if=/dev/zero of=/tmp/swapfile bs=1024 count=2097152
 chmod 600 /tmp/swapfile
 mkswap /tmp/swapfile
 mv /tmp/swapfile /swapfile
-EOF
-
-# Install the kernel
-if [[ ${LAUNCHPAD}  == "Y" ]]; then
-    chroot ${chroot_dir} /bin/bash -c "apt-get -y install linux-image-5.10.110-rockchip-rk3588 linux-headers-5.10.110-rockchip-rk3588 linux-dtb-5.10.110-rockchip-rk3588 u-boot-${BOARD}-rk3588"
-else
-    cp linux-{headers,image,dtb}-5.10.110-rockchip-rk3588_*.deb ${chroot_dir}/tmp
-    chroot ${chroot_dir} /bin/bash -c "dpkg -i /tmp/linux-{headers,image,dtb}-5.10.110-rockchip-rk3588_*.deb && rm -rf /tmp/*"
-    chroot ${chroot_dir} /bin/bash -c "apt-mark hold linux-image-5.10.110-rockchip-rk3588 linux-headers-5.10.110-rockchip-rk3588 linux-dtb-5.10.110-rockchip-rk3588"
-
-    cp u-boot-"${BOARD}"-rk3588_*.deb ${chroot_dir}/tmp
-    chroot ${chroot_dir} /bin/bash -c "dpkg -i /tmp/u-boot-${BOARD}-rk3588_*.deb && rm -rf /tmp/*"
-    chroot ${chroot_dir} /bin/bash -c "apt-mark hold u-boot-${BOARD}-rk3588"
-fi
-
-# Finish kernel install
-cat << EOF | chroot ${chroot_dir} /bin/bash
-set -eE 
-trap 'echo Error: in $0 on line $LINENO' ERR
-
-# Generate kernel module dependencies
-depmod -a 5.10.110-rockchip-rk3588
-
-# Create kernel and component symlinks
-cd /boot 
-ln -s initrd.img-5.10.110-rockchip-rk3588 initrd.img
-ln -s System.map-5.10.110-rockchip-rk3588 System.map
-ln -s vmlinuz-5.10.110-rockchip-rk3588 vmlinuz
-ln -s config-5.10.110-rockchip-rk3588 config
 EOF
 
 # DNS
@@ -263,53 +219,18 @@ cp ${overlay_dir}/etc/update-manager/release-upgrades ${chroot_dir}/etc/update-m
 rm -f ${chroot_dir}/var/lib/dbus/machine-id
 true > ${chroot_dir}/etc/machine-id 
 
+# Do not create bak files for flash-kernel
+echo "NO_CREATE_DOT_BAK_FILES=true" >> ${chroot_dir}/etc/environment
+
 # Fix Intel AX210 not working after linux-firmware update
 [ -e ${chroot_dir}/usr/lib/firmware/iwlwifi-ty-a0-gf-a0.pnvm ] && mv ${chroot_dir}/usr/lib/firmware/iwlwifi-ty-a0-gf-a0.{pnvm,bak}
-
-# Board specific changes
-if [[ ${BOARD} =~ orangepi5|orangepi5b ]]; then
-    echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-hdmi0-sound", ENV{SOUND_DESCRIPTION}="HDMI0 Audio"' > ${chroot_dir}/etc/udev/rules.d/90-naming-audios.rules
-    echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-dp0-sound", ENV{SOUND_DESCRIPTION}="DP0 Audio"' >> ${chroot_dir}/etc/udev/rules.d/90-naming-audios.rules
-    echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-es8388-sound", ENV{SOUND_DESCRIPTION}="ES8388 Audio"' >> ${chroot_dir}/etc/udev/rules.d/90-naming-audios.rules
-
-    cp ${overlay_dir}/usr/lib/systemd/system/enable-usb2.service ${chroot_dir}/usr/lib/systemd/system/enable-usb2.service
-    chroot ${chroot_dir} /bin/bash -c "systemctl --no-reload enable enable-usb2"
-
-    chroot ${chroot_dir} /bin/bash -c "apt-get -y install wiringpi-opi"
-    echo "BOARD=${BOARD}" > ${chroot_dir}/etc/"${VENDOR}"-release
-elif [[ "${BOARD}" =~ orangepi5plus ]]; then
-    echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-hdmi0-sound", ENV{SOUND_DESCRIPTION}="HDMI0 Audio"' > ${chroot_dir}/etc/udev/rules.d/90-naming-audios.rules
-    echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-hdmi1-sound", ENV{SOUND_DESCRIPTION}="HDMI1 Audio"' >> ${chroot_dir}/etc/udev/rules.d/90-naming-audios.rules
-    echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-hdmiin-sound", ENV{SOUND_DESCRIPTION}="HDMI-In Audio"' >> ${chroot_dir}/etc/udev/rules.d/90-naming-audios.rules
-    echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-dp0-sound", ENV{SOUND_DESCRIPTION}="DP0 Audio"' >> ${chroot_dir}/etc/udev/rules.d/90-naming-audios.rules
-    echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-es8388-sound", ENV{SOUND_DESCRIPTION}="ES8388 Audio"' >> ${chroot_dir}/etc/udev/rules.d/90-naming-audios.rules
-
-    chroot ${chroot_dir} /bin/bash -c "apt-get -y install wiringpi-opi"
-    echo "BOARD=${BOARD}" > ${chroot_dir}/etc/"${VENDOR}"-release
-elif [[ "${BOARD}" =~ rock5a ]]; then
-	echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-hdmi0-sound", ENV{SOUND_DESCRIPTION}="HDMI0 Audio"' > ${chroot_dir}/etc/udev/rules.d/90-naming-audios.rules
-	echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-hdmi1-sound", ENV{SOUND_DESCRIPTION}="HDMI1 Audio"' >> ${chroot_dir}/etc/udev/rules.d/90-naming-audios.rules
-	echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-es8316-sound", ENV{SOUND_DESCRIPTION}="ES8316 Audio"' >> ${chroot_dir}/etc/udev/rules.d/90-naming-audios.rules
-elif [[ "${BOARD}" =~ rock5b ]]; then
-    echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-hdmi0-sound", ENV{SOUND_DESCRIPTION}="HDMI0 Audio"' > ${chroot_dir}/etc/udev/rules.d/90-naming-audios.rules
-    echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-hdmi1-sound", ENV{SOUND_DESCRIPTION}="HDMI1 Audio"' >> ${chroot_dir}/etc/udev/rules.d/90-naming-audios.rules
-    echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-hdmiin-sound", ENV{SOUND_DESCRIPTION}="HDMI-In Audio"' >> ${chroot_dir}/etc/udev/rules.d/90-naming-audios.rules
-    echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-dp0-sound", ENV{SOUND_DESCRIPTION}="DP0 Audio"' >> ${chroot_dir}/etc/udev/rules.d/90-naming-audios.rules
-    echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-es8316-sound", ENV{SOUND_DESCRIPTION}="ES8316 Audio"' >> ${chroot_dir}/etc/udev/rules.d/90-naming-audios.rules
-elif [[ "${BOARD}" =~ nanopir6c|nanopir6s|lubancat-4 ]]; then
-    echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-hdmi0-sound", ENV{SOUND_DESCRIPTION}="HDMI0 Audio"' > ${chroot_dir}/etc/udev/rules.d/90-naming-audios.rules
-fi
-
-# Update initramfs
-chroot ${chroot_dir} /bin/bash -c "update-initramfs -u"
 
 # Umount temporary API filesystems
 umount -lf ${chroot_dir}/dev/pts 2> /dev/null || true
 umount -lf ${chroot_dir}/* 2> /dev/null || true
 
 # Tar the entire rootfs
-cd ${chroot_dir} && XZ_OPT="-0 -T0" tar -cpJf ../ubuntu-22.04.2-preinstalled-server-arm64-"${BOARD}".rootfs.tar.xz . && cd ..
-../scripts/build-image.sh ubuntu-22.04.2-preinstalled-server-arm64-"${BOARD}".rootfs.tar.xz
+cd ${chroot_dir} && XZ_OPT="-3 -T0" tar -cpJf ../ubuntu-22.04.2-preinstalled-server-arm64.rootfs.tar.xz . && cd ..
 
 # Mount the temporary API filesystems
 mkdir -p ${chroot_dir}/{proc,sys,run,dev,dev/pts}
@@ -318,63 +239,11 @@ mount -t sysfs /sys ${chroot_dir}/sys
 mount -o bind /dev ${chroot_dir}/dev
 mount -o bind /dev/pts ${chroot_dir}/dev/pts
 
-# Pin packages from ppa
-cp ${overlay_dir}/etc/apt/preferences.d/panfork-mesa-ppa ${chroot_dir}/etc/apt/preferences.d/panfork-mesa-ppa
-cp ${overlay_dir}/etc/apt/preferences.d/rockchip-multimedia-ppa ${chroot_dir}/etc/apt/preferences.d/rockchip-multimedia-ppa
-
-# Add mesa and rockchip multimedia mirrors
-cat << EOF | chroot ${chroot_dir} /bin/bash
-set -eE 
-trap 'echo Error: in $0 on line $LINENO' ERR
-
-# Add mesa and rockchip multimedia mirrors
-add-apt-repository -y ppa:liujianfeng1994/panfork-mesa
-add-apt-repository -y ppa:liujianfeng1994/rockchip-multimedia
-
-# Download and update installed packages
-apt-get -y update && apt-get -y upgrade && apt-get -y dist-upgrade
-EOF
-
-# Copy packages to the rootfs
-cp -r ../packages/rkaiq ${chroot_dir}/tmp
-
-# Install packages
-cat << EOF | chroot ${chroot_dir} /bin/bash
-set -eE 
-trap 'echo Error: in $0 on line $LINENO' ERR
-
-mkdir -p /tmp/apt-local
-mv /tmp/*/*.deb /tmp/apt-local
-
-# Backup sources.list and setup a local apt repo
-cd /tmp/apt-local && apt-ftparchive packages . > Packages && cd /
-echo -e "Package: *\nPin: origin ""\nPin-Priority: 1001" > /etc/apt/preferences.d/apt-local
-echo "deb [trusted=yes] file:/tmp/apt-local/ ./" > /tmp/apt-local.list
-cp /etc/apt/sources.list /etc/apt/sources.list.bak
-cat /tmp/apt-local.list /etc/apt/sources.list > /tmp/sources.list
-mv /tmp/sources.list /etc/apt/sources.list
-rm -rf /tmp/apt-local.list
-apt-get -y update
-
-debs=()
-for i in /tmp/apt-local/*.deb; do
-    debs+=("\$(basename "\${i}" | cut -d "_" -f1)")
-done
-
-# Install and hold packages
-apt-get -y install "\${debs[@]}" && apt-mark hold "\${debs[@]}"
-
-# Copy binary for rkaiq
-cp -f /tmp/rkaiq/rkaiq_3A_server /usr/bin
-
-# Remove the local apt repo and restore sources.list
-mv /etc/apt/sources.list.bak /etc/apt/sources.list
-rm -f /etc/apt/preferences.d/apt-local
-rm -rf /tmp/*
-
-# Clean package cache
-apt-get -y update && apt-get -y autoremove && apt-get -y clean && apt-get -y autoclean
-EOF
+# Install rkaiq
+#cp -r ../packages/rkaiq/camera-engine-rkaiq_rk3588_arm64.deb ${chroot_dir}/tmp
+#chroot ${chroot_dir} /bin/bash -c "dpkg -i /tmp/camera-engine-rkaiq_rk3588_arm64.deb"
+#cp -f ../packages/rkaiq/rkaiq_3A_server ${chroot_dir}/usr/bin
+#rm -f ${chroot_dir}/tmp/camera-engine-rkaiq_rk3588_arm64.deb
 
 # Download and update packages
 cat << EOF | chroot ${chroot_dir} /bin/bash
@@ -489,11 +358,6 @@ cp ${overlay_dir}/etc/initramfs-tools/conf-hooks.d/plymouth ${chroot_dir}/etc/in
 # Fix Intel AX210 not working after linux-firmware update
 [ -e ${chroot_dir}/usr/lib/firmware/iwlwifi-ty-a0-gf-a0.pnvm ] && mv ${chroot_dir}/usr/lib/firmware/iwlwifi-ty-a0-gf-a0.{pnvm,bak}
 
-# Set HDMI as default audio output
-if [[ ${BOARD} =~ orangepi5|orangepi5b|nanopir6c|nanopir6s ]]; then
-    echo "set-default-sink alsa_output.platform-hdmi0-sound.stereo-fallback" >> ${chroot_dir}/etc/pulse/default.pa
-fi
-
 # Update initramfs
 chroot ${chroot_dir} /bin/bash -c "update-initramfs -u"
 
@@ -502,5 +366,4 @@ umount -lf ${chroot_dir}/dev/pts 2> /dev/null || true
 umount -lf ${chroot_dir}/* 2> /dev/null || true
 
 # Tar the entire rootfs
-cd ${chroot_dir} && XZ_OPT="-0 -T0" tar -cpJf ../ubuntu-22.04.2-preinstalled-desktop-arm64-"${BOARD}".rootfs.tar.xz . && cd ..
-../scripts/build-image.sh ubuntu-22.04.2-preinstalled-desktop-arm64-"${BOARD}".rootfs.tar.xz
+cd ${chroot_dir} && XZ_OPT="-3 -T0" tar -cpJf ../ubuntu-22.04.2-preinstalled-desktop-arm64.rootfs.tar.xz . && cd ..

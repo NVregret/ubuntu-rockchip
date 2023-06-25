@@ -12,21 +12,18 @@ cd "$(dirname -- "$(readlink -f -- "$0")")" && cd ..
 mkdir -p build && cd build
 
 if [ ! -d linux-rockchip ]; then
-    # shellcheck source=/dev/null
-    source ../packages/linux-rockchip/debian/upstream
-    git clone --depth=1 --single-branch --progress -b "${BRANCH}" "${GIT}" linux-rockchip
-    git -C linux-rockchip checkout "${COMMIT}"
+    git clone --single-branch --progress -b linux-5.10-gen-rkr4 --depth=1 https://github.com/DHDAXCW/linux-rockchip linux-rockchip
+fi
 
+if [ ! linux-rockchip ]; then
+    cd linux-rockchip && make distclean && cd ../
 fi
 
 rm -rf linux*.deb
-rm -rf linux-rockchip/debian/*
-cp -r ../packages/linux-rockchip/debian linux-rockchip
-cp -r ../packages/linux-rockchip/debian/kernel/* linux-rockchip/arch/arm64/boot/dts/rockchip
 
 cd linux-rockchip
 
 # Compile kernel into a deb package
 dpkg-buildpackage -a "$(cat debian/arch)" -d -b -nc -uc
 
-rm -f ../*.buildinfo ../*.changes ../linux-libc-dev*
+rm -f ../*.buildinfo ../*.changes

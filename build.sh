@@ -5,7 +5,7 @@ trap 'echo Error: in $0 on line $LINENO' ERR
 
 usage() {
 cat << HEREDOC
-Usage: $0 --board=[orangepi5|orangepi5b]
+Usage: $0 --board=[orangepi5|orangepi5b|orangepi5plus|rock5b|rock5a|nanopct6|nanopir6c|nanopir6s|indiedroid-nova|lubancat-4]
 
 Required arguments:
   -b, --board=BOARD     target board 
@@ -88,15 +88,15 @@ if [[ ${CLEAN} == "Y" ]]; then
     rm -rf build
 fi
 
-if [[ ${BOARD} =~ orangepi5|orangepi5b|orangepi5plus ]]; then
+if [ "${BOARD}" == orangepi5 ] || [ "${BOARD}" == orangepi5b ] || [ "${BOARD}" == orangepi5plus ]; then
     export VENDOR=orangepi
-elif [[ "${BOARD}" =~ rock5b|rock5a ]]; then
+elif [ "${BOARD}" == rock5b ] || [ "${BOARD}" == rock5a ]; then
     export VENDOR=radxa
-elif [[ "${BOARD}" =~ nanopir6c|nanopir6s ]]; then
+elif [ "${BOARD}" == nanopir6c ] || [ "${BOARD}" == nanopir6s ] || [ "${BOARD}" == nanopct6 ]; then
     export VENDOR=nanopi
-elif [[ "${BOARD}" =~ indiedroid-nova ]]; then
+elif [ "${BOARD}" == indiedroid-nova ]; then
     export VENDOR=9tripod
-elif [[ "${BOARD}" =~ lubancat-4 ]]; then
+elif [ "${BOARD}" == lubancat-4 ]; then
     export VENDOR=lubancat
 else
     echo "Error: \"${BOARD}\" is an unsupported board"
@@ -114,7 +114,11 @@ if [[ ${UBOOT_ONLY} == "Y" ]]; then
 fi
 
 if [[ ${LAUNCHPAD} != "Y" ]]; then
-    eval "${DOCKER}" ./scripts/build-kernel.sh
+    for file in build/linux-{headers,image}-5.10.160-rockchip_*.deb; do
+        if [ ! -e "$file" ]; then
+            eval "${DOCKER}" ./scripts/build-kernel.sh
+        fi
+    done
 fi
 
 if [[ ${LAUNCHPAD} != "Y" ]]; then
@@ -122,6 +126,6 @@ if [[ ${LAUNCHPAD} != "Y" ]]; then
 fi
 
 eval "${DOCKER}" ./scripts/build-rootfs.sh
+eval "${DOCKER}" ./scripts/config-image.sh
 
 exit 0
-

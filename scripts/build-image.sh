@@ -38,12 +38,12 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 if [ -z "$1" ]; then
-    echo "Usage: $0 filename.rootfs.tar.xz"
+    echo "Usage: $0 filename.rootfs.tar"
     exit 1
 fi
 
 rootfs="$(readlink -f "$1")"
-if [[ "$(basename "${rootfs}")" != *".rootfs.tar.xz" || ! -e "${rootfs}" ]]; then
+if [[ "$(basename "${rootfs}")" != *".rootfs.tar" || ! -e "${rootfs}" ]]; then
     echo "Error: $(basename "${rootfs}") must be a rootfs tarfile"
     exit 1
 fi
@@ -69,9 +69,9 @@ elif [[ "${BOARD}" == orangepi5b ]]; then
     OVERLAY_PREFIX=orangepi-5
 elif [[ "${BOARD}" == orangepi5plus ]]; then
     DEVICE_TREE=rk3588-orangepi-5-plus.dtb
-    OVERLAY_PREFIX=orangepi-5
+    OVERLAY_PREFIX=orangepi-5-plus
 elif [[ "${BOARD}" == rock5a ]]; then
-    DEVICE_TREE=rk3588a-rock-5a.dtb
+    DEVICE_TREE=rk3588s-rock-5a.dtb
     OVERLAY_PREFIX=rock-5a
 elif [[ "${BOARD}" == rock5b ]]; then
     DEVICE_TREE=rk3588-rock-5b.dtb
@@ -82,14 +82,20 @@ elif [[ "${BOARD}" == nanopir6c ]]; then
 elif [[ "${BOARD}" == nanopir6s ]]; then
     DEVICE_TREE=rk3588s-nanopi-r6s.dtb
     OVERLAY_PREFIX=
+elif [[ "${BOARD}" == nanopct6 ]]; then
+    DEVICE_TREE=rk3588-nanopc-t6.dtb
+    OVERLAY_PREFIX=
+elif [[ "${BOARD}" == indiedroid-nova ]]; then
+    DEVICE_TREE=rk3588s-9tripod-linux.dtb
+    OVERLAY_PREFIX=
 elif [[ "${BOARD}" == lubancat-4 ]]; then
     DEVICE_TREE=rk3588s-lubancat-4.dtb
     OVERLAY_PREFIX=
 fi
 
 # Create an empty disk image
-img="../images/$(basename "${rootfs}" .rootfs.tar.xz).img"
-size="$(xz -l "${rootfs}" | tail -n +2 | sed 's/,//g' | awk '{print int($5 + 1)}')"
+img="../images/$(basename "${rootfs}" .rootfs.tar).img"
+size="$(( $(wc -c < "${rootfs}" ) / 1024 / 1024 ))"
 truncate -s "$(( size + 2048 + 512 ))M" "${img}"
 
 # Create loop device for disk image
@@ -165,8 +171,7 @@ mount "${disk}${partition_char}1" ${mount_point}/system-boot
 mount "${disk}${partition_char}2" ${mount_point}/writable
 
 # Copy the rootfs to root partition
-echo -e "Decompressing $(basename "${rootfs}")\n"
-tar -xpJf "${rootfs}" -C ${mount_point}/writable
+tar -xpf "${rootfs}" -C ${mount_point}/writable
 
 # Set boot args for the splash screen
 [ -z "${img##*desktop*}" ] && bootargs="quiet splash plymouth.ignore-serial-consoles" || bootargs=""
@@ -208,6 +213,9 @@ for overlay_file in ${overlays}; do
     elif load ${devtype} ${devnum}:${distro_bootpart} ${fdtoverlay_addr_r} /dtbs/overlays/${overlay_file}.dtbo; then
         echo "Applying device tree overlay: /dtbs/overlays/${overlay_file}.dtbo"
         fdt apply ${fdtoverlay_addr_r} || setenv overlay_error "true"
+    elif load ${devtype} ${devnum}:${distro_bootpart} ${fdtoverlay_addr_r} /dtbs/overlays/rk3588-${overlay_file}.dtbo; then
+        echo "Applying device tree overlay: /dtbs/overlays/rk3588-${overlay_file}.dtbo"
+        fdt apply ${fdtoverlay_addr_r} || setenv overlay_error "true"
     fi
 done
 if test "${overlay_error}" = "true"; then
@@ -231,8 +239,8 @@ overlays=
 EOF
 
 # Copy kernel and initrd to boot partition
-cp ${mount_point}/writable/boot/initrd.img-5.10.110-rockchip-rk3588 ${mount_point}/system-boot/initrd.img
-cp ${mount_point}/writable/boot/vmlinuz-5.10.110-rockchip-rk3588 ${mount_point}/system-boot/vmlinuz
+cp ${mount_point}/writable/boot/initrd.img-5.10.160-rockchip ${mount_point}/system-boot/initrd.img
+cp ${mount_point}/writable/boot/vmlinuz-5.10.160-rockchip ${mount_point}/system-boot/vmlinuz
 
 # Copy device trees to boot partition
 mv ${mount_point}/writable/boot/firmware/* ${mount_point}/system-boot
@@ -242,7 +250,22 @@ dd if=${mount_point}/writable/usr/lib/u-boot-"${VENDOR}"-rk3588/idbloader.img of
 dd if=${mount_point}/writable/usr/lib/u-boot-"${VENDOR}"-rk3588/u-boot.itb of="${loop}" seek=16384 conv=notrunc
 
 # Cloud init config for server image
-[ -z "${img##*server*}" ] && cp ../overlay/boot/firmware/{meta-data,user-data,network-config} ${mount_point}/system-boot
+if [ -z "${img##*server*}" ]; then
+    cp ../overlay/boot/firmware/{meta-data,user-data,network-config} ${mount_point}/system-boot
+    if [ "${BOARD}" == rock5b ] || [ "${BOARD}" == indiedroid-nova ]; then
+        sed -i 's/eth0:/enP4p65s0:/g' ${mount_point}/system-boot/network-config
+    elif [ "${BOARD}" == orangepi5plus ]; then
+        sed -i 's/eth0:/enP4p65s0:\n    dhcp4: true\n    optional: true\n  enP3p49s0:/g' ${mount_point}/system-boot/network-config
+    elif [ "${BOARD}" == nanopir6c ]; then
+        sed -i 's/eth0:/eth0:\n    dhcp4: true\n    optional: true\n  enP3p49s0:/g' ${mount_point}/system-boot/network-config
+    elif [ "${BOARD}" == nanopir6s ]; then
+        sed -i 's/eth0:/eth0:\n    dhcp4: true\n    optional: true\n  enP3p49s0:\n    dhcp4: true\n    optional: true\n  enP4p65s0:/g' ${mount_point}/system-boot/network-config
+    elif [ "${BOARD}" == nanopct6 ]; then
+        sed -i 's/eth0:/enP2p33s0:\n    dhcp4: true\n    optional: true\n  enP4p65s0:/g' ${mount_point}/system-boot/network-config
+    elif [ "${BOARD}" == lubancat-4 ]; then
+        sed -i 's/eth0:/eth0:\n    dhcp4: true\n    optional: true\n  enP3p49s0:/g' ${mount_point}/system-boot/network-config
+    fi
+fi
 
 sync --file-system
 sync

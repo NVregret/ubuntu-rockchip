@@ -1,4 +1,0 @@
-GIT=https://github.com/armbian/linux-rockchip.git
-COMMIT=9e451a29d2ecbceb155fa193727c1086d0683ecf
-BRANCH=rockchip-5.10
-VERSION=5.10.110
