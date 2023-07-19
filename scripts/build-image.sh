@@ -91,6 +91,9 @@ elif [[ "${BOARD}" == indiedroid-nova ]]; then
 elif [[ "${BOARD}" == lubancat-4 ]]; then
     DEVICE_TREE=rk3588s-lubancat-4.dtb
     OVERLAY_PREFIX=
+elif [[ "${BOARD}" == hinlink-h88k ]]; then
+    DEVICE_TREE=rk3588s-hinlink-h88k-max.dtb
+    OVERLAY_PREFIX=
 fi
 
 # Create an empty disk image
@@ -264,6 +267,8 @@ if [ -z "${img##*server*}" ]; then
         sed -i 's/eth0:/enP2p33s0:\n    dhcp4: true\n    optional: true\n  enP4p65s0:/g' ${mount_point}/system-boot/network-config
     elif [ "${BOARD}" == lubancat-4 ]; then
         sed -i 's/eth0:/eth0:\n    dhcp4: true\n    optional: true\n  enP3p49s0:/g' ${mount_point}/system-boot/network-config
+    elif [ "${BOARD}" == hinlink-h88k ]; then
+        sed -i 's/eth0:/eth0:\n    dhcp4: true\n    optional: true\n  enP3p49s0:\n    dhcp4: true\n    optional: true\n  enP4p65s0:/g' ${mount_point}/system-boot/network-config
     fi
 fi
 

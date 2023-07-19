@@ -1,0 +1,74 @@
+#!/usr/bin/make -f
+
+include /usr/share/dpkg/architecture.mk
+include /usr/share/dpkg/pkg-info.mk
+
+ifneq ($(DEB_BUILD_GNU_TYPE),$(DEB_HOST_GNU_TYPE))
+CROSS_COMPILE ?= $(DEB_HOST_GNU_TYPE)-
+endif
+
+ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+NJOBS := -j $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+else
+NJOBS := -j $(shell nproc)
+endif
+
+DDR_BLOB := rk3588_ddr_lp4_2112MHz_lp5_2736MHz_v1.09.bin
+BL31_BLOB := rk3588_bl31_v1.36.elf
+BL32_BLOB := rk3588_bl32_v1.12.bin
+
+hinlink-h88k: 
+	@mkdir -p debian/build/$@
+
+	make O=debian/build/$@ \
+	  CROSS_COMPILE=$(CROSS_COMPILE) \
+	  ARCH=arm \
+	  $(NJOBS) \
+	  $@_defconfig
+
+	@touch .scmversion	
+	@sed -i 's/CONFIG_LOCALVERSION=""/CONFIG_LOCALVERSION="-hinlink-rk3588"/g' debian/build/$@/.config
+
+	@mkdir -p debian/build/$@/arch/arm/mach-rockchip
+	@cp arch/arm/mach-rockchip/decode_bl31.py debian/build/$@/arch/arm/mach-rockchip/decode_bl31.py
+
+	@cp debian/rkbin/$(BL32_BLOB) debian/build/$@/tee.bin
+	@cp debian/rkbin/$(BL31_BLOB) debian/build/$@/bl31.elf
+
+	make O=debian/build/$@ \
+	  CROSS_COMPILE=$(CROSS_COMPILE) \
+	  SOURCE_DATE_EPOCH=$(shell date +%s) \
+	  ARCH=arm \
+	  $(NJOBS) \
+	  BL31=../../../debian/rkbin/$(BL31_BLOB) \
+	  spl/u-boot-spl.bin u-boot.dtb u-boot.itb
+
+	./debian/build/$@/tools/mkimage -n rk3588 -T rksd -d \
+	  debian/rkbin/$(DDR_BLOB):debian/build/$@/spl/u-boot-spl.bin \
+	  debian/build/$@/idbloader.img
+
+build: hinlink-h88k
+
+binary-hinlink-h88k:
+	rm -rf debian/tmp/hinlink-h88k
+	mkdir -m 755 -p debian/tmp/hinlink-h88k/usr/lib/u-boot-hinlink-rk3588
+	cp debian/build/hinlink-h88k/u-boot.itb debian/tmp/hinlink-h88k/usr/lib/u-boot-hinlink-rk3588/u-boot.itb
+	cp debian/build/hinlink-h88k/idbloader.img debian/tmp/hinlink-h88k/usr/lib/u-boot-hinlink-rk3588/idbloader.img
+
+	mkdir -m 755 -p "debian/tmp/hinlink-h88k/DEBIAN"
+	mkdir -p "debian/tmp/hinlink-h88k/usr/share/doc/u-boot-hinlink-rk3588"
+	cp debian/copyright "debian/tmp/hinlink-h88k/usr/share/doc/u-boot-hinlink-rk3588/"
+	cp debian/changelog "debian/tmp/hinlink-h88k/usr/share/doc/u-boot-hinlink-rk3588/changelog.Debian"
+	gzip -9 "debian/tmp/hinlink-h88k/usr/share/doc/u-boot-hinlink-rk3588/changelog.Debian"
+	sh -c "cd 'debian/tmp/hinlink-h88k'; find . -type f ! -path './DEBIAN/*' -printf '%P\0' | xargs -r0 md5sum > DEBIAN/md5sums"
+	chown -R root:root "debian/tmp/hinlink-h88k" && chmod -R go-w "debian/tmp/hinlink-h88k" && chmod -R a+rX "debian/tmp/hinlink-h88k"
+	dpkg-gencontrol -pu-boot-hinlink-h88k-rk3588 -P"debian/tmp/hinlink-h88k"
+	dpkg --build "debian/tmp/hinlink-h88k" ..
+
+binary-arch: binary-hinlink-h88k
+
+binary: binary-arch
+
+clean:
+	@rm -rf debian/*tmp debian/tmp debian/build debian/files
+	$(MAKE) clean

@@ -150,10 +150,18 @@ for type in server desktop; do
         cp ${overlay_dir}/usr/bin/bt_load_rtk_firmware ${chroot_dir}/usr/bin/bt_load_rtk_firmware
         cp ${overlay_dir}/usr/lib/systemd/system/rtl8821cs-bluetooth.service ${chroot_dir}/usr/lib/systemd/system/rtl8821cs-bluetooth.service
         chroot ${chroot_dir} /bin/bash -c "systemctl enable rtl8821cs-bluetooth"
+    elif [ "${BOARD}" == hinlink-h88k ]; then
+    {
+        echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-hdmi0-sound", ENV{SOUND_DESCRIPTION}="HDMI0 Audio"'
+        echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-hdmi1-sound", ENV{SOUND_DESCRIPTION}="HDMI1 Audio"'
+        echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-hdmiin-sound", ENV{SOUND_DESCRIPTION}="HDMI-In Audio"'
+        echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-dp0-sound", ENV{SOUND_DESCRIPTION}="DP0 Audio"'
+        echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-es8316-sound", ENV{SOUND_DESCRIPTION}="ES8316 Audio"'
+    } > ${chroot_dir}/etc/udev/rules.d/90-naming-audios.rules
     fi
 
     if [[ ${type} == "desktop" ]]; then
-        if [ "${BOARD}" == orangepi5 ] || [ "${BOARD}" == orangepi5b ] || [ "${BOARD}" == nanopir6c ] || [ "${BOARD}" == nanopir6s ] || [ "${BOARD}" == lubancat-4 ];then
+        if [ "${BOARD}" == orangepi5 ] || [ "${BOARD}" == orangepi5b ] || [ "${BOARD}" == nanopir6c ] || [ "${BOARD}" == nanopir6s ] || [ "${BOARD}" == lubancat-4 ] || [ "${BOARD}" == hinlink-h88k ];then
             echo "set-default-sink alsa_output.platform-hdmi0-sound.stereo-fallback" >> ${chroot_dir}/etc/pulse/default.pa
         elif [ "${BOARD}" == indiedroid-nova ]; then
             echo "set-default-sink 1" >> ${chroot_dir}/etc/pulse/default.pa
