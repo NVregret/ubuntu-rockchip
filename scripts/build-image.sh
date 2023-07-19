@@ -92,7 +92,7 @@ elif [[ "${BOARD}" == lubancat-4 ]]; then
     DEVICE_TREE=rk3588s-lubancat-4.dtb
     OVERLAY_PREFIX=
 elif [[ "${BOARD}" == hinlink-h88k ]]; then
-    DEVICE_TREE=rk3588s-hinlink-h88k-max.dtb
+    DEVICE_TREE=rk3588-hinlink-h88k-max.dtb
     OVERLAY_PREFIX=
 fi
 
