@@ -9,14 +9,6 @@ on:
         required: true
         type: choice
         options:
-        - "orangepi5"
-        - "orangepi5b"
-        - "orangepi5plus"
-        - "rock5b"
-        - "rock5a"
-        - "nanopir6c"
-        - "nanopir6s"
-        - "indiedroid-nova"
         - "lubancat-4"
         - "hinlink-h88k"
       clean:
