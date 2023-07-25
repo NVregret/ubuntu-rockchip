@@ -116,3 +116,7 @@ jobs:
       with:
          name: |
             bin-archive
+            
+    - name: remove compile garbage
+      run: |
+         sudo rm -rf build images
