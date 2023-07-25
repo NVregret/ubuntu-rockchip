@@ -61,38 +61,44 @@ if [[ -z ${VENDOR} ]]; then
     exit 1
 fi
 
-if [[ "${BOARD}" == orangepi5 ]]; then
+if [[ "${BOARD}" == orangepi-5 ]]; then
     DEVICE_TREE=rk3588s-orangepi-5.dtb
     OVERLAY_PREFIX=orangepi-5
-elif [[ "${BOARD}" == orangepi5b ]]; then
+elif [[ "${BOARD}" == orangepi-5b ]]; then
     DEVICE_TREE=rk3588s-orangepi-5b.dtb
     OVERLAY_PREFIX=orangepi-5
-elif [[ "${BOARD}" == orangepi5plus ]]; then
+elif [[ "${BOARD}" == orangepi-5-plus ]]; then
     DEVICE_TREE=rk3588-orangepi-5-plus.dtb
     OVERLAY_PREFIX=orangepi-5-plus
-elif [[ "${BOARD}" == rock5a ]]; then
+elif [[ "${BOARD}" == rock-5a ]]; then
     DEVICE_TREE=rk3588s-rock-5a.dtb
     OVERLAY_PREFIX=rock-5a
-elif [[ "${BOARD}" == rock5b ]]; then
+elif [[ "${BOARD}" == rock-5b ]]; then
     DEVICE_TREE=rk3588-rock-5b.dtb
     OVERLAY_PREFIX=rock-5b
-elif [[ "${BOARD}" == nanopir6c ]]; then
+elif [[ "${BOARD}" == radxa-cm5-io ]]; then
+    DEVICE_TREE=rk3588s-radxa-cm5-io.dtb
+    OVERLAY_PREFIX=radxa-cm5-io
+elif [[ "${BOARD}" == nanopi-r6c ]]; then
     DEVICE_TREE=rk3588s-nanopi-r6c.dtb
     OVERLAY_PREFIX=
-elif [[ "${BOARD}" == nanopir6s ]]; then
+elif [[ "${BOARD}" == nanopi-r6s ]]; then
     DEVICE_TREE=rk3588s-nanopi-r6s.dtb
     OVERLAY_PREFIX=
-elif [[ "${BOARD}" == nanopct6 ]]; then
+elif [[ "${BOARD}" == nanopc-t6 ]]; then
     DEVICE_TREE=rk3588-nanopc-t6.dtb
     OVERLAY_PREFIX=
+elif [[ "${BOARD}" == mixtile-blade3 ]]; then
+    DEVICE_TREE=rk3588-blade3-v101-linux.dtb
+    OVERLAY_PREFIX=mixtile-blade3
 elif [[ "${BOARD}" == indiedroid-nova ]]; then
     DEVICE_TREE=rk3588s-9tripod-linux.dtb
     OVERLAY_PREFIX=
-elif [[ "${BOARD}" == lubancat-4 ]]; then
-    DEVICE_TREE=rk3588s-lubancat-4.dtb
-    OVERLAY_PREFIX=
 elif [[ "${BOARD}" == hinlink-h88k ]]; then
     DEVICE_TREE=rk3588-hinlink-h88k-max.dtb
+    OVERLAY_PREFIX=
+elif [[ "${BOARD}" == lubancat-4 ]]; then
+    DEVICE_TREE=rk3588s-lubancat-4.dtb
     OVERLAY_PREFIX=
 fi
 
@@ -249,22 +255,24 @@ cp ${mount_point}/writable/boot/vmlinuz-5.10.160-rockchip ${mount_point}/system-
 mv ${mount_point}/writable/boot/firmware/* ${mount_point}/system-boot
 
 # Write bootloader to disk image
-dd if=${mount_point}/writable/usr/lib/u-boot/idbloader.img of="${loop}" seek=64 conv=notrunc
-dd if=${mount_point}/writable/usr/lib/u-boot/u-boot.itb of="${loop}" seek=16384 conv=notrunc
+dd if=${mount_point}/writable/usr/lib/u-boot-"${VENDOR}"-rk3588/idbloader.img of="${loop}" seek=64 conv=notrunc
+dd if=${mount_point}/writable/usr/lib/u-boot-"${VENDOR}"-rk3588/u-boot.itb of="${loop}" seek=16384 conv=notrunc
 
 # Cloud init config for server image
 if [ -z "${img##*server*}" ]; then
     cp ../overlay/boot/firmware/{meta-data,user-data,network-config} ${mount_point}/system-boot
-    if [ "${BOARD}" == rock5b ] || [ "${BOARD}" == indiedroid-nova ]; then
+    if [ "${BOARD}" == rock-5b ] || [ "${BOARD}" == indiedroid-nova ]; then
         sed -i 's/eth0:/enP4p65s0:/g' ${mount_point}/system-boot/network-config
-    elif [ "${BOARD}" == orangepi5plus ]; then
+    elif [ "${BOARD}" == orangepi-5-plus ]; then
         sed -i 's/eth0:/enP4p65s0:\n    dhcp4: true\n    optional: true\n  enP3p49s0:/g' ${mount_point}/system-boot/network-config
-    elif [ "${BOARD}" == nanopir6c ]; then
+    elif [ "${BOARD}" == nanopi-r6c ]; then
         sed -i 's/eth0:/eth0:\n    dhcp4: true\n    optional: true\n  enP3p49s0:/g' ${mount_point}/system-boot/network-config
-    elif [ "${BOARD}" == nanopir6s ]; then
+    elif [ "${BOARD}" == nanopi-r6s ]; then
         sed -i 's/eth0:/eth0:\n    dhcp4: true\n    optional: true\n  enP3p49s0:\n    dhcp4: true\n    optional: true\n  enP4p65s0:/g' ${mount_point}/system-boot/network-config
-    elif [ "${BOARD}" == nanopct6 ]; then
+    elif [ "${BOARD}" == nanopc-t6 ]; then
         sed -i 's/eth0:/enP2p33s0:\n    dhcp4: true\n    optional: true\n  enP4p65s0:/g' ${mount_point}/system-boot/network-config
+    elif [ "${BOARD}" == mixtile-blade3 ]; then
+        sed -i 's/eth0:/enP2p35s0:\n    dhcp4: true\n    optional: true\n  enP2p36s0:/g' ${mount_point}/system-boot/network-config
     elif [ "${BOARD}" == lubancat-4 ]; then
         sed -i 's/eth0:/eth0:\n    dhcp4: true\n    optional: true\n  enP3p49s0:/g' ${mount_point}/system-boot/network-config
     elif [ "${BOARD}" == hinlink-h88k ]; then

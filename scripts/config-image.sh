@@ -28,7 +28,7 @@ if [[ ${LAUNCHPAD} != "Y" ]]; then
             exit 1
         fi
     done
-    for file in u-boot-"${BOARD}"-rk3588_*.deb; do
+    for file in u-boot-"${BOARD}"_*.deb; do
         if [ ! -e "$file" ]; then
             echo "Error: missing u-boot deb, please run build-u-boot.sh"
             exit 1
@@ -84,15 +84,15 @@ for type in server desktop; do
 
     # Install the bootloader
     if [[ ${LAUNCHPAD}  == "Y" ]]; then
-        chroot ${chroot_dir} /bin/bash -c "apt-get -y install u-boot-${BOARD}-rk3588"
+        chroot ${chroot_dir} /bin/bash -c "apt-get -y install u-boot-${BOARD}"
     else
-        cp u-boot-"${BOARD}"-rk3588_*.deb ${chroot_dir}/tmp
-        chroot ${chroot_dir} /bin/bash -c "dpkg -i /tmp/u-boot-${BOARD}-rk3588_*.deb && rm -rf /tmp/*"
-        chroot ${chroot_dir} /bin/bash -c "apt-mark hold u-boot-${BOARD}-rk3588"
+        cp u-boot-"${BOARD}"_*.deb ${chroot_dir}/tmp
+        chroot ${chroot_dir} /bin/bash -c "dpkg -i /tmp/u-boot-${BOARD}_*.deb && rm -rf /tmp/*"
+        chroot ${chroot_dir} /bin/bash -c "apt-mark hold u-boot-${BOARD}"
     fi
 
     # Board specific changes
-    if [ "${BOARD}" == orangepi5plus ]; then
+    if [ "${BOARD}" == orangepi-5-plus ]; then
     {
         echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-hdmi0-sound", ENV{SOUND_DESCRIPTION}="HDMI0 Audio"'
         echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-hdmi1-sound", ENV{SOUND_DESCRIPTION}="HDMI1 Audio"'
@@ -102,8 +102,8 @@ for type in server desktop; do
     } > ${chroot_dir}/etc/udev/rules.d/90-naming-audios.rules
 
         chroot ${chroot_dir} /bin/bash -c "apt-get -y install wiringpi-opi libwiringpi2-opi libwiringpi-opi-dev"
-        echo "BOARD=${BOARD}" > ${chroot_dir}/etc/"${VENDOR}"-release
-    elif [ "${BOARD}" == orangepi5 ] || [ "${BOARD}" == orangepi5b ]; then
+        echo "BOARD=orangepi5plus" > ${chroot_dir}/etc/orangepi-release
+    elif [ "${BOARD}" == orangepi-5 ] || [ "${BOARD}" == orangepi-5b ]; then
     {
         echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-hdmi0-sound", ENV{SOUND_DESCRIPTION}="HDMI0 Audio"'
         echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-dp0-sound", ENV{SOUND_DESCRIPTION}="DP0 Audio"'
@@ -114,14 +114,14 @@ for type in server desktop; do
         chroot ${chroot_dir} /bin/bash -c "systemctl --no-reload enable enable-usb2"
 
         chroot ${chroot_dir} /bin/bash -c "apt-get -y install wiringpi-opi libwiringpi2-opi libwiringpi-opi-dev"
-        echo "BOARD=${BOARD}" > ${chroot_dir}/etc/"${VENDOR}"-release
-    elif [ "${BOARD}" == rock5a ]; then
+        echo "BOARD=orangepi5" > ${chroot_dir}/etc/orangepi-release
+    elif [ "${BOARD}" == rock-5a ]; then
     {
         echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-hdmi0-sound", ENV{SOUND_DESCRIPTION}="HDMI0 Audio"'
-        echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-dp0-sound", ENV{SOUND_DESCRIPTION}="DP0 Audio"'
+        echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-dp0-sound", ENV{SOUND_DESCRIPTION}="HDMI1 Audio"'
         echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-es8316-sound", ENV{SOUND_DESCRIPTION}="ES8316 Audio"'
     } > ${chroot_dir}/etc/udev/rules.d/90-naming-audios.rules
-    elif [ "${BOARD}" == rock5b ]; then
+    elif [ "${BOARD}" == rock-5b ]; then
     {
         echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-hdmi0-sound", ENV{SOUND_DESCRIPTION}="HDMI0 Audio"'
         echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-hdmi1-sound", ENV{SOUND_DESCRIPTION}="HDMI1 Audio"'
@@ -129,11 +129,19 @@ for type in server desktop; do
         echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-dp0-sound", ENV{SOUND_DESCRIPTION}="DP0 Audio"'
         echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-es8316-sound", ENV{SOUND_DESCRIPTION}="ES8316 Audio"'
     } > ${chroot_dir}/etc/udev/rules.d/90-naming-audios.rules
-    elif [ "${BOARD}" == nanopir6c ] || [ "${BOARD}" == nanopir6s ]; then
+    elif [ "${BOARD}" == radxa-cm5-io ]; then
     {
         echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-hdmi0-sound", ENV{SOUND_DESCRIPTION}="HDMI0 Audio"'
+        echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-dp0-sound", ENV{SOUND_DESCRIPTION}="DP0 Audio"'
+        echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-es8316-sound", ENV{SOUND_DESCRIPTION}="ES8316 Audio"'
     } > ${chroot_dir}/etc/udev/rules.d/90-naming-audios.rules
-    elif [ "${BOARD}" == nanopct6 ]; then
+    elif [ "${BOARD}" == nanopi-r6c ] || [ "${BOARD}" == nanopi-r6s ]; then
+    {
+        echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-hdmi0-sound", ENV{SOUND_DESCRIPTION}="HDMI0 Audio"'
+        cp ${overlay_dir}/etc/init.d/friendlyelec-leds.sh ${chroot_dir}/etc/init.d/friendlyelec-leds.sh
+        chroot ${chroot_dir} /bin/bash -c "update-rc.d friendlyelec-leds.sh defaults"
+    } > ${chroot_dir}/etc/udev/rules.d/90-naming-audios.rules
+    elif [ "${BOARD}" == nanopc-t6 ]; then
     {
         echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-hdmi0-sound", ENV{SOUND_DESCRIPTION}="HDMI0 Audio"'
         echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-hdmi1-sound", ENV{SOUND_DESCRIPTION}="HDMI1 Audio"'
@@ -141,27 +149,36 @@ for type in server desktop; do
         echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-dp0-sound", ENV{SOUND_DESCRIPTION}="DP0 Audio"'
         echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-rt5616-sound", ENV{SOUND_DESCRIPTION}="RT5616 Audio"'
     } > ${chroot_dir}/etc/udev/rules.d/90-naming-audios.rules
-    elif [ "${BOARD}" == lubancat-4 ]; then
+    elif [ "${BOARD}" == mixtile-blade3 ]; then
     {
         echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-hdmi0-sound", ENV{SOUND_DESCRIPTION}="HDMI0 Audio"'
+        echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-hdmiin-sound", ENV{SOUND_DESCRIPTION}="HDMI-In Audio"'
+        echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-dp0-sound", ENV{SOUND_DESCRIPTION}="DP0 Audio"'
+        echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-dp1-sound", ENV{SOUND_DESCRIPTION}="DP1 Audio"'
     } > ${chroot_dir}/etc/udev/rules.d/90-naming-audios.rules
     elif [ "${BOARD}" == indiedroid-nova ]; then
         cp ${overlay_dir}/usr/bin/rtk_hciattach ${chroot_dir}/usr/bin/rtk_hciattach
         cp ${overlay_dir}/usr/bin/bt_load_rtk_firmware ${chroot_dir}/usr/bin/bt_load_rtk_firmware
         cp ${overlay_dir}/usr/lib/systemd/system/rtl8821cs-bluetooth.service ${chroot_dir}/usr/lib/systemd/system/rtl8821cs-bluetooth.service
         chroot ${chroot_dir} /bin/bash -c "systemctl enable rtl8821cs-bluetooth"
+    elif [ "${BOARD}" == lubancat-4 ]; then
+    {
+        echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-hdmi0-sound", ENV{SOUND_DESCRIPTION}="HDMI0 Audio"'
+        echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-dp0-sound", ENV{SOUND_DESCRIPTION}="DP0 Audio"'
+        echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-es8388-sound", ENV{SOUND_DESCRIPTION}="ES8388 Audio"'
+    } > ${chroot_dir}/etc/udev/rules.d/90-naming-audios.rules
     elif [ "${BOARD}" == hinlink-h88k ]; then
     {
         echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-hdmi0-sound", ENV{SOUND_DESCRIPTION}="HDMI0 Audio"'
         echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-hdmi1-sound", ENV{SOUND_DESCRIPTION}="HDMI1 Audio"'
         echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-hdmiin-sound", ENV{SOUND_DESCRIPTION}="HDMI-In Audio"'
         echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-dp0-sound", ENV{SOUND_DESCRIPTION}="DP0 Audio"'
-        echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-es8316-sound", ENV{SOUND_DESCRIPTION}="ES8316 Audio"'
+        echo 'SUBSYSTEM=="sound", ENV{ID_PATH}=="platform-es8388-sound", ENV{SOUND_DESCRIPTION}="ES8388 Audio"'
     } > ${chroot_dir}/etc/udev/rules.d/90-naming-audios.rules
     fi
 
     if [[ ${type} == "desktop" ]]; then
-        if [ "${BOARD}" == orangepi5 ] || [ "${BOARD}" == orangepi5b ] || [ "${BOARD}" == nanopir6c ] || [ "${BOARD}" == nanopir6s ] || [ "${BOARD}" == lubancat-4 ] || [ "${BOARD}" == hinlink-h88k ];then
+        if [ "${BOARD}" == orangepi-5 ] || [ "${BOARD}" == orangepi-5b ] || [ "${BOARD}" == nanopi-r6c ] || [ "${BOARD}" == nanopi-r6s ] || [ "${BOARD}" == lubancat-4 ] || [ "${BOARD}" == hinlink-h88k ]; then
             echo "set-default-sink alsa_output.platform-hdmi0-sound.stereo-fallback" >> ${chroot_dir}/etc/pulse/default.pa
         elif [ "${BOARD}" == indiedroid-nova ]; then
             echo "set-default-sink 1" >> ${chroot_dir}/etc/pulse/default.pa

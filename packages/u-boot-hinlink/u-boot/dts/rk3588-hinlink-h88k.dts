@@ -64,6 +64,20 @@
 		vin-supply = <&vcc5v0_sys>;
 	};
 
+	vcc3v3_pcie30: vcc3v3-pcie30 {
+		u-boot,dm-pre-reloc;
+		compatible = "regulator-fixed";
+		regulator-name = "vcc3v3_pcie30";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		enable-active-high;
+		gpio = <&gpio2 RK_PC5 GPIO_ACTIVE_HIGH>;
+		regulator-boot-on;
+		regulator-always-on;
+		startup-delay-us = <50000>;
+		vin-supply = <&vcc5v0_sys>;
+	};
+
 	led_sys: led-sys {
 		u-boot,dm-pre-reloc;
 		compatible = "regulator-fixed";
@@ -102,44 +116,26 @@
 	u-boot,dm-pre-reloc;
 };
 
-&usb2phy2_grf {
-	status = "okay";
+&pcie3x4 {
 	u-boot,dm-pre-reloc;
+	vpcie3v3-supply = <&vcc3v3_pcie30>;
+	reset-gpios = <&gpio4 RK_PB6 GPIO_ACTIVE_HIGH>;
+ 	status = "okay";
 };
 
-&u2phy2 {
+&pcie30phy {
+ 	u-boot,dm-pre-reloc;
 	status = "okay";
+};
+ 
+&combphy0_ps {
 	u-boot,dm-pre-reloc;
+	status = "okay";
 };
 
-&u2phy2_host {
-	status = "okay";
+&combphy2_psu {
 	u-boot,dm-pre-reloc;
-};
-
-&usb_host1_ehci {
 	status = "okay";
-	u-boot,dm-pre-reloc;
-};
-
-&usb_host1_ohci {
-	status = "okay";
-	u-boot,dm-pre-reloc;
-};
-
-&usb2phy3_grf {
-	status = "okay";
-	u-boot,dm-pre-reloc;
-};
-
-&u2phy3 {
-	status = "okay";
-	u-boot,dm-pre-reloc;
-};
-
-&u2phy3_host {
-	status = "okay";
-	u-boot,dm-pre-reloc;
 };
 
 &sfc {

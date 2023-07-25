@@ -3,9 +3,11 @@
 set -eE 
 trap 'echo Error: in $0 on line $LINENO' ERR
 
+cd "$(dirname -- "$(readlink -f -- "$0")")"
+
 usage() {
 cat << HEREDOC
-Usage: $0 --board=[orangepi5|orangepi5b|orangepi5plus|rock5b|rock5a|nanopct6|nanopir6c|nanopir6s|indiedroid-nova|lubancat-4|hinlink-h88k]
+Usage: $0 --board=[orangepi-5|orangepi-5b|orangepi-5-plus|rock-5b|rock-5a|radxa-cm5-io|nanopc-t6|nanopi-r6c|nanopi-r6s|indiedroid-nova|mixtile-blade3|lubancat-4|hinlink-h88k]
 
 Required arguments:
   -b, --board=BOARD     target board 
@@ -43,8 +45,8 @@ for i in "$@"; do
             shift
             ;;
         -d|--docker)
-            DOCKER="docker run --privileged --network=host --rm -it -v \"$(pwd)\":/opt -e BOARD -e VENDOR -e LAUNCHPAD ubuntu-orange-pi5-build /bin/bash"
-            docker build -t ubuntu-orange-pi5-build docker
+            DOCKER="docker run --privileged --network=host --rm -it -v \"$(pwd)\":/opt -e BOARD -e VENDOR -e LAUNCHPAD ubuntu-rockchip-build /bin/bash"
+            docker build -t ubuntu-rockchip-build docker
             shift
             ;;
         -k|--kernel-only)
@@ -88,14 +90,16 @@ if [[ ${CLEAN} == "Y" ]]; then
     rm -rf build
 fi
 
-if [ "${BOARD}" == orangepi5 ] || [ "${BOARD}" == orangepi5b ] || [ "${BOARD}" == orangepi5plus ]; then
+if [ "${BOARD}" == orangepi-5 ] || [ "${BOARD}" == orangepi-5b ] || [ "${BOARD}" == orangepi-5-plus ]; then
     export VENDOR=orangepi
-elif [ "${BOARD}" == rock5b ] || [ "${BOARD}" == rock5a ]; then
+elif [ "${BOARD}" == rock-5b ] || [ "${BOARD}" == rock-5a ] || [ "${BOARD}" == radxa-cm5-io ]; then
     export VENDOR=radxa
-elif [ "${BOARD}" == nanopir6c ] || [ "${BOARD}" == nanopir6s ] || [ "${BOARD}" == nanopct6 ]; then
-    export VENDOR=nanopi
+elif [ "${BOARD}" == nanopi-r6c ] || [ "${BOARD}" == nanopi-r6s ] || [ "${BOARD}" == nanopc-t6 ]; then
+    export VENDOR=friendlyelec
 elif [ "${BOARD}" == indiedroid-nova ]; then
     export VENDOR=9tripod
+elif [ "${BOARD}" == mixtile-blade3 ]; then
+    export VENDOR=mixtile
 elif [ "${BOARD}" == lubancat-4 ]; then
     export VENDOR=lubancat
 elif [ "${BOARD}" == hinlink-h88k ]; then
@@ -104,6 +108,9 @@ else
     echo "Error: \"${BOARD}\" is an unsupported board"
     exit 1
 fi
+
+mkdir -p build/logs
+exec > >(tee "build/logs/build-$(date +"%Y%m%d%H%M%S").log") 2>&1
 
 if [[ ${KERNEL_ONLY} == "Y" ]]; then
     eval "${DOCKER}" ./scripts/build-kernel.sh
